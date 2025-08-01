@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 venv/
 set_webhook.py
+innovatebot-credentials.json
