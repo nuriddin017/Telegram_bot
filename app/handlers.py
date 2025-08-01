@@ -1,6 +1,10 @@
 from telebot import TeleBot
 from app.storage import user_data
 from app.sheets import add_user_data 
+from app.sheets import sheet  # sheets.py dan Google Sheet obyektini olib kelamiz
+from datetime import datetime
+
+import bot
 
 def register_handlers(bot: TeleBot):
     @bot.message_handler(commands=['start'])
@@ -59,13 +63,82 @@ def register_handlers(bot: TeleBot):
 """
             bot.send_message(chat_id, msg_text)
             bot.send_message(chat_id, "✏️ Ma'lumotlaringizda xatolik bo‘lsa, iltimos \"✏️ Ma'lumotlarni tahrirlash\" tugmasini bosing.", 
-                             reply_markup=generate_edit_button())
+                             reply_markup=generate_main_menu())
             user_data[chat_id]["step"] = "done"
         else:
             bot.send_message(chat_id, "Ma'lumotlar allaqachon to‘plangan. Rahmat!")
 
-def generate_edit_button():
+
+# O'zbekcha oy nomlari
+OY_NOMLARI = {
+    'January': 'yanvar',
+    'February': 'fevral',
+    'March': 'mart',
+    'April': 'aprel',
+    'May': 'may',
+    'June': 'iyun',
+    'July': 'iyul',
+    'August': 'avgust',
+    'September': 'sentyabr',
+    'October': 'oktyabr',
+    'November': 'noyabr',
+    'December': 'dekabr'
+}
+
+@bot.message_handler(func=lambda msg: msg.text == "📚 Davomat")
+def handle_davomat(msg):
+    telegram_id = str(msg.from_user.id)
+    data = sheet.get_all_values()
+
+    # Bugungi sana formatini aniqlaymiz (masalan: August 1)
+    bugun = datetime.now()
+    oy = bugun.strftime("%B")
+    kun = bugun.day
+    sana = f"{oy} {kun}"  # Masalan: "August 1"
+    sana_index = -1
+
+    # Sananing qaysi ustunda turganini topamiz
+    for idx, val in enumerate(data[0]):
+        if val.strip() == sana:
+            sana_index = idx
+            break
+
+    if sana_index == -1:
+        bot.send_message(msg.chat.id, "Bugungi sana jadvalda mavjud emas.")
+        return
+
+    # Har bir qatorda tekshiramiz
+    for row in data[1:]:
+        if len(row) > sana_index and row[0] == telegram_id:
+            ism_familiya = row[1]
+            holat = row[sana_index].strip().lower()
+            oy_uz = OY_NOMLARI.get(oy, oy.lower())
+            sana_uz = f"{kun}-{oy_uz}"
+
+            if holat == "bor":
+                bot.send_message(msg.chat.id, f"📚 Davomat:\n{ism_familiya} bugun {sana_uz}da darsga qatnashdi.")
+            elif holat == "yo'q":
+                bot.send_message(msg.chat.id, f"📚 Davomat:\n{ism_familiya} bugun {sana_uz}da darsga qatnashmagan.")
+            else:
+                bot.send_message(msg.chat.id, f"{ism_familiya} uchun bugungi davomat maʼlumotlari topilmadi.")
+            return
+
+    bot.send_message(msg.chat.id, "Sizning Telegram ID'ingiz bo‘yicha maʼlumot topilmadi.")
+
+
+
+
+
+
+
+def generate_main_menu():
     from telebot.types import ReplyKeyboardMarkup, KeyboardButton
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("📚 Davomat"))
     markup.add(KeyboardButton("✏️ Ma'lumotlarni tahrirlash"))
     return markup
+
+
+
+
+
