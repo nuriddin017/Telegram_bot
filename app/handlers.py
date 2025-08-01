@@ -1,5 +1,6 @@
 from telebot import TeleBot
 from app.storage import user_data
+from app.sheets import add_user_data 
 
 def register_handlers(bot: TeleBot):
     @bot.message_handler(commands=['start'])
@@ -46,6 +47,8 @@ def register_handlers(bot: TeleBot):
         elif step == "phone":
             user_data[chat_id]["phone"] = m.text
             user_data[chat_id]["telegram_id"] = chat_id
+            # SHEETGA YOZISH UCHUN QO‘SHILDI:
+            add_user_data(user_data[chat_id])
             msg_text = f"""✅ Ma'lumotlar qabul qilindi!
 👤 Ism: {user_data[chat_id]['name']}
 🏫 Maktab: {user_data[chat_id]['school']}
